@@ -6,7 +6,7 @@ import tkinter as tk
 class VisualGridHuntGame:
     """A flexible Pacman-style grid environment with support for configurable opponents and larger scales."""
 
-    def __init__(self, width=10, height=10, num_food=10, num_opponents=2, custom_walls=None):
+    def __init__(self, width=10, height=10, num_food=10, num_opponents=2, custom_walls=None, num_traps=8):
         self.width = width
         self.height = height
         self.agent_pos = [0, 0]  # Starting position (x, y)
@@ -25,6 +25,15 @@ class VisualGridHuntGame:
             pos_tuple = (fx, fy)
             if pos_tuple != (0, 0) and pos_tuple not in self.walls:
                 self.food_positions.add(pos_tuple)
+
+        # Declaring new trap collection
+        self.toxic_traps = set()
+        while len(self.toxic_traps) < num_traps:
+            gx = random.randint(0, self.width - 1)
+            gy = random.randint(0, self.height - 1)
+            pos_tuple = (gx, gy)
+            if pos_tuple != (0, 0) and pos_tuple not in self.walls and pos_tuple not in self.food_positions:
+                self.toxic_traps.add(pos_tuple)
 
         # Generate adversarial opponents
         self.opponents = []
@@ -47,7 +56,8 @@ class VisualGridHuntGame:
             'hit_wall': tuple(self.agent_pos) in self.walls,
             'collision': self.collision,
             'score': self.score,
-            'remaining_food': len(self.food_positions)
+            'remaining_food': len(self.food_positions),
+            'smells_toxin': tuple(self.agent_pos) in self.toxic_traps
         }
 
     def execute_action(self, action: str):
@@ -65,6 +75,11 @@ class VisualGridHuntGame:
 
         if tuple(new_pos) in self.walls:
             self.score -= 5
+        else:
+            self.agent_pos = new_pos
+
+        if tuple(new_pos) in self.toxix_traps:
+            self.score -= 15
         else:
             self.agent_pos = new_pos
 
@@ -145,6 +160,13 @@ class GridGameGUI:
             y1 = (self.env.height - 1 - fy) * self.cell_size + offset
             self.canvas.create_oval(x1, y1, x1 + self.cell_size * 0.5, y1 + self.cell_size * 0.5, fill="#f59e0b",
                                     outline="#d97706")
+
+        for gx, gy in self.env.toxic_traps:
+            offset = self.cell_size * 0.3
+            x1 = gx * self.cell_size + offset
+            y1 = (self.env.height - 1 - gy) * self.cell_size + offset
+            self.canvas.create_oval(x1, y1, x1 + self.cell_size * 0.5, y1 + self.cell_size * 0.5, fill="#800080",
+                                    outline="#cea2fd")
 
         for ox, oy in self.env.opponents:
             offset = self.cell_size * 0.2
